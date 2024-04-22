@@ -1,7 +1,7 @@
 from confluent_kafka import Consumer
 import json
 from opensearchpy import OpenSearch
-from opensearch_dsl import Search
+
 
 ####OperSearch####
 
@@ -11,6 +11,15 @@ port = 9200
 client = OpenSearch(
     hosts = [{'host': host, 'port': port}],
 )
+
+
+def gendata():
+    for row in data.splitlines():
+        yield { "index": {
+            "_index":"cdc-events14",
+            "_source":row
+        }
+        }
 
 c = Consumer({
     'bootstrap.servers': 'localhost:9092',
@@ -29,18 +38,9 @@ while True:
         print("Consumer error: {}".format(msg.error()))
         continue
     print('Received message: {}'.format(msg.value().decode('utf-8')))
-    value = msg.value().decode('utf-8')
+    value = msg.value().decode('UTF-8')
     data = json.loads(value)
-    response = client.index(
-    index = 'cdc-events9',
-    body = data,
-    refresh = True
-    )
-
-
+    client.bulk(gendata())
 c.close()
-'''
-json_data = '{"index" : {"_index":"cdc-events7","_id":"2"}}\n' + data
-client.bulk(json_data)
-'''
+
 
